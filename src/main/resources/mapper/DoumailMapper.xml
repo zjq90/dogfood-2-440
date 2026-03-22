@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.idouban.mapper.DoumailMapper">
+
+    <!-- 通用结果映射 -->
+    <resultMap id="DoumailResultMap" type="com.idouban.entity.Doumail">
+        <id column="doumail_id" property="doumailId" jdbcType="INTEGER"/>
+        <result column="from_user_id" property="fromUserId" jdbcType="INTEGER"/>
+        <result column="to_user_id" property="toUserId" jdbcType="INTEGER"/>
+        <result column="chat_msg" property="chatMsg" jdbcType="VARCHAR"/>
+        <result column="chat_time" property="chatTime" jdbcType="TIMESTAMP"/>
+        <result column="status" property="status" jdbcType="INTEGER"/>
+        <result column="`read`" property="read" jdbcType="INTEGER"/>
+        <!-- 关联用户信息 -->
+        <result column="from_nick" property="fromUserNick" jdbcType="VARCHAR"/>
+        <result column="from_portrait" property="fromUserPortrait" jdbcType="VARCHAR"/>
+        <result column="to_nick" property="toUserNick" jdbcType="VARCHAR"/>
+        <result column="to_portrait" property="toUserPortrait" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 查询用户的豆邮会话列表（去重） -->
+    <select id="selectConversationList" resultMap="DoumailResultMap">
+        SELECT
+            d.doumail_id,
+            d.chat_msg,
+            d.chat_time,
+            d.`read`,
+            CASE
+                WHEN d.from_user_id = #{userId} THEN d.to_user_id
+                ELSE d.from_user_id
+            END AS other_user_id,
+            CASE
+                WHEN d.from_user_id = #{userId} THEN u_to.nickname
+                ELSE u_from.nickname
+            END AS other_nick,
+            CASE
+                WHEN d.from_user_id = #{userId} THEN u_to.portrait
+                ELSE u_from.portrait
+            END AS other_portrait
+        FROM doumail d
+        LEFT JOIN user u_from ON d.from_user_id = u_from.user_id
+        LEFT JOIN user u_to ON d.to_user_id = u_to.user_id
+        WHERE (d.from_user_id = #{userId} AND d.status != 1)
+           OR (d.to_user_id = #{userId} AND d.status != 2)
+        GROUP BY other_user_id
+        ORDER BY d.chat_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <!-- 查询会话总数 -->
+    <select id="selectConversationCount" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT CASE
+            WHEN from_user_id = #{userId} THEN to_user_id
+            ELSE from_user_id
+        END) AS conversation_count
+        FROM doumail
+        WHERE (from_user_id = #{userId} AND status != 1)
+           OR (to_user_id = #{userId} AND status != 2)
+    </select>
+
+    <!-- 查询两个用户之间的豆邮详情 -->
+    <select id="selectDoumailDetail" resultMap="DoumailResultMap">
+        SELECT
+            d.doumail_id,
+            d.from_user_id,
+            d.to_user_id,
+            d.chat_msg,
+            d.chat_time,
+            d.`read`,
+            u_from.nickname AS from_nick,
+            u_from.portrait AS from_portrait
+        FROM doumail d
+        LEFT JOIN user u_from ON d.from_user_id = u_from.user_id
+        WHERE ((d.from_user_id = #{userId} AND d.to_user_id = #{targetUserId})
+           OR (d.from_user_id = #{targetUserId} AND d.to_user_id = #{userId}))
+          AND ((d.from_user_id = #{userId} AND d.status != 1)
+           OR (d.to_user_id = #{userId} AND d.status != 2))
+        ORDER BY d.chat_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <!-- 查询两个用户之间的豆邮总数 -->
+    <select id="selectDoumailCount" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM doumail
+        WHERE ((from_user_id = #{userId} AND to_user_id = #{targetUserId})
+           OR (from_user_id = #{targetUserId} AND to_user_id = #{userId}))
+          AND ((from_user_id = #{userId} AND status != 1)
+           OR (to_user_id = #{userId} AND status != 2))
+    </select>
+
+    <!-- 发送豆邮 -->
+    <insert id="insertDoumail" useGeneratedKeys="true" keyProperty="doumailId">
+        INSERT INTO doumail (from_user_id, to_user_id, chat_msg)
+        VALUES (#{fromUserId}, #{toUserId}, #{chatMsg})
+    </insert>
+
+    <!-- 标记已读 -->
+    <update id="markAsRead">
+        UPDATE doumail
+        SET `read` = 1
+        WHERE from_user_id = #{fromUserId} AND to_user_id = #{toUserId} AND `read` = 0
+    </update>
+
+    <!-- 删除豆邮（逻辑删除，更新状态） -->
+    <update id="deleteDoumail">
+        UPDATE doumail
+        SET status = CASE
+            WHEN from_user_id = #{userId} THEN 1
+            WHEN to_user_id = #{userId} THEN 2
+            ELSE status
+        END
+        WHERE doumail_id = #{doumailId}
+          AND (from_user_id = #{userId} OR to_user_id = #{userId})
+    </update>
+
+    <!-- 查询未读豆邮数 -->
+    <select id="selectUnreadCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM doumail
+        WHERE to_user_id = #{userId} AND `read` = 0 AND status != 2
+    </select>
+
+</mapper>

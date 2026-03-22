@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.idouban.mapper.ArticleMapper">
+
+    <!-- 通用结果映射 -->
+    <resultMap id="ArticleResultMap" type="com.idouban.entity.Article">
+        <id column="article_id" property="articleId" jdbcType="INTEGER"/>
+        <result column="title" property="title" jdbcType="VARCHAR"/>
+        <result column="author" property="author" jdbcType="INTEGER"/>
+        <result column="published_time" property="publishedTime" jdbcType="TIMESTAMP"/>
+        <result column="content" property="content" jdbcType="VARCHAR"/>
+        <result column="collection" property="collection" jdbcType="INTEGER"/>
+        <result column="share" property="share" jdbcType="INTEGER"/>
+        <result column="comment" property="comment" jdbcType="INTEGER"/>
+        <result column="star" property="star" jdbcType="INTEGER"/>
+        <result column="stick" property="stick" jdbcType="INTEGER"/>
+        <result column="page_view" property="pageView" jdbcType="INTEGER"/>
+        <!-- 关联查询作者信息 -->
+        <result column="author_nick" property="authorNick" jdbcType="VARCHAR"/>
+        <result column="author_img" property="authorImg" jdbcType="VARCHAR"/>
+        <result column="tag_id" property="tagId" jdbcType="INTEGER"/>
+        <result column="tag_name" property="tagName" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!-- 通用查询列 -->
+    <sql id="Base_Column_List">
+        a.article_id, a.title, a.author, a.published_time, a.content,
+        a.collection, a.share, a.comment, a.star, a.stick, a.page_view
+    </sql>
+
+    <!-- 根据文章ID查询文章详情（包含作者信息） -->
+    <select id="selectById" resultMap="ArticleResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>,
+            u.nickname AS author_nick,
+            u.portrait AS author_img,
+            t.tag_id,
+            t.tag_name
+        FROM a_article a
+        LEFT JOIN user u ON a.author = u.user_id
+        LEFT JOIN article_to_tag att ON a.article_id = att.article_id
+        LEFT JOIN a_tag t ON att.tag_id = t.tag_id
+        WHERE a.article_id = #{articleId}
+        LIMIT 1
+    </select>
+
+    <!-- 分页查询文章列表（包含作者信息和标签） -->
+    <select id="selectArticleList" resultMap="ArticleResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>,
+            u.nickname AS author_nick,
+            u.portrait AS author_img,
+            t.tag_id,
+            t.tag_name
+        FROM a_article a
+        LEFT JOIN user u ON a.author = u.user_id
+        LEFT JOIN article_to_tag att ON a.article_id = att.article_id
+        LEFT JOIN a_tag t ON att.tag_id = t.tag_id
+        <where>
+            <if test="tagId != null and tagId > 0">
+                AND t.tag_id = #{tagId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (a.title LIKE CONCAT('%', #{keyword}, '%') OR u.nickname LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY a.stick DESC, a.published_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <!-- 查询文章总数 -->
+    <select id="selectArticleCount" resultType="java.lang.Long">
+        SELECT COUNT(DISTINCT a.article_id)
+        FROM a_article a
+        LEFT JOIN article_to_tag att ON a.article_id = att.article_id
+        LEFT JOIN a_tag t ON att.tag_id = t.tag_id
+        <where>
+            <if test="tagId != null and tagId > 0">
+                AND t.tag_id = #{tagId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND a.title LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+    </select>
+
+    <!-- 根据用户ID查询用户的文章列表 -->
+    <select id="selectByUserId" resultMap="ArticleResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>,
+            u.nickname AS author_nick,
+            u.portrait AS author_img
+        FROM a_article a
+        LEFT JOIN user u ON a.author = u.user_id
+        WHERE a.author = #{userId}
+        ORDER BY a.published_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <!-- 查询用户的文章总数 -->
+    <select id="selectCountByUserId" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM a_article WHERE author = #{userId}
+    </select>
+
+    <!-- 新增文章 -->
+    <insert id="insertArticle" useGeneratedKeys="true" keyProperty="articleId">
+        INSERT INTO a_article (title, author, content)
+        VALUES (#{title}, #{author}, #{content})
+    </insert>
+
+    <!-- 更新文章 -->
+    <update id="updateArticle">
+        UPDATE a_article
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+        </set>
+        WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 删除文章 -->
+    <delete id="deleteById">
+        DELETE FROM a_article WHERE article_id = #{articleId}
+    </delete>
+
+    <!-- 增加文章浏览量 -->
+    <update id="incrementPageView">
+        UPDATE a_article
+        SET page_view = page_view + 1
+        WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 更新文章统计数据 -->
+    <update id="updateStats">
+        UPDATE a_article
+        <choose>
+            <when test="type == 1">
+                SET star = star + #{increment}
+            </when>
+            <when test="type == 2">
+                SET `collection` = `collection` + #{increment}
+            </when>
+            <when test="type == 3">
+                SET comment = comment + #{increment}
+            </when>
+            <when test="type == 4">
+                SET share = share + #{increment}
+            </when>
+        </choose>
+        WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 获取热门文章 -->
+    <select id="selectHotArticles" resultMap="ArticleResultMap">
+        SELECT
+            <include refid="Base_Column_List"/>,
+            u.nickname AS author_nick,
+            u.portrait AS author_img
+        FROM a_article a
+        LEFT JOIN user u ON a.author = u.user_id
+        ORDER BY a.page_view DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 文章-标签关联 -->
+    <insert id="insertArticleTag">
+        INSERT INTO article_to_tag (article_id, tag_id)
+        VALUES (#{articleId}, #{tagId})
+    </insert>
+
+    <!-- 删除文章的标签关联 -->
+    <delete id="deleteArticleTags">
+        DELETE FROM article_to_tag WHERE article_id = #{articleId}
+    </delete>
+
+</mapper>
