@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lzh.idouban.mapper.FriendMapper">
+
+    <resultMap id="BaseResultMap" type="com.lzh.idouban.entity.Friend">
+        <id column="friend_id" property="friendId"/>
+        <result column="from_user_id" property="fromUserId"/>
+        <result column="to_user_id" property="toUserId"/>
+        <result column="status" property="status"/>
+        <result column="group_id" property="groupId"/>
+        <!-- 扩展字段 -->
+        <result column="friend_nick" property="friendNick"/>
+        <result column="friend_portrait" property="friendPortrait"/>
+        <result column="friend_signature" property="friendSignature"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        f.friend_id, f.from_user_id, f.to_user_id, f.status, f.group_id
+    </sql>
+
+    <!-- 根据ID查询好友关系 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               u.nickname as friend_nick, u.portrait as friend_portrait, u.signature as friend_signature
+        FROM friend f
+        LEFT JOIN user u ON f.to_user_id = u.user_id
+        WHERE f.friend_id = #{friendId}
+        LIMIT 1
+    </select>
+
+    <!-- 查询两个用户之间的好友关系 -->
+    <select id="selectByUserIds" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               u.nickname as friend_nick, u.portrait as friend_portrait, u.signature as friend_signature
+        FROM friend f
+        LEFT JOIN user u ON f.to_user_id = u.user_id
+        WHERE f.from_user_id = #{fromUserId} AND f.to_user_id = #{toUserId}
+        LIMIT 1
+    </select>
+
+    <!-- 查询用户的关注列表 -->
+    <select id="selectFollowingByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               u.nickname as friend_nick, u.portrait as friend_portrait, u.signature as friend_signature
+        FROM friend f
+        LEFT JOIN user u ON f.to_user_id = u.user_id
+        WHERE f.from_user_id = #{userId} AND f.status != 3
+        ORDER BY f.friend_id DESC
+    </select>
+
+    <!-- 查询用户的粉丝列表 -->
+    <select id="selectFollowersByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               u.nickname as friend_nick, u.portrait as friend_portrait, u.signature as friend_signature
+        FROM friend f
+        LEFT JOIN user u ON f.from_user_id = u.user_id
+        WHERE f.to_user_id = #{userId} AND f.status != 3
+        ORDER BY f.friend_id DESC
+    </select>
+
+    <!-- 查询用户的好友列表（双向关注） -->
+    <select id="selectFriendsByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               u.nickname as friend_nick, u.portrait as friend_portrait, u.signature as friend_signature
+        FROM friend f
+        LEFT JOIN user u ON f.to_user_id = u.user_id
+        WHERE f.from_user_id = #{userId} AND f.status = 2
+        ORDER BY f.friend_id DESC
+    </select>
+
+    <!-- 查询用户的黑名单 -->
+    <select id="selectBlacklistByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               u.nickname as friend_nick, u.portrait as friend_portrait, u.signature as friend_signature
+        FROM friend f
+        LEFT JOIN user u ON f.to_user_id = u.user_id
+        WHERE f.from_user_id = #{userId} AND f.status = 3
+        ORDER BY f.friend_id DESC
+    </select>
+
+    <!-- 插入新好友关系 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="friendId">
+        INSERT INTO friend (from_user_id, to_user_id, status, group_id)
+        VALUES (#{fromUserId}, #{toUserId}, #{status}, #{groupId})
+    </insert>
+
+    <!-- 更新好友关系状态 -->
+    <update id="updateStatus">
+        UPDATE friend SET status = #{status} WHERE friend_id = #{friendId}
+    </update>
+
+    <!-- 删除好友关系 -->
+    <delete id="deleteById">
+        DELETE FROM friend WHERE friend_id = #{friendId}
+    </delete>
+
+    <!-- 查询关注数 -->
+    <select id="countFollowing" resultType="int">
+        SELECT COUNT(1) FROM friend WHERE from_user_id = #{userId} AND status != 3
+    </select>
+
+    <!-- 查询粉丝数 -->
+    <select id="countFollowers" resultType="int">
+        SELECT COUNT(1) FROM friend WHERE to_user_id = #{userId} AND status != 3
+    </select>
+
+    <!-- 查询好友数 -->
+    <select id="countFriends" resultType="int">
+        SELECT COUNT(1) FROM friend WHERE from_user_id = #{userId} AND status = 2
+    </select>
+
+</mapper>

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lzh.idouban.mapper.ArticleMapper">
+
+    <resultMap id="BaseResultMap" type="com.lzh.idouban.entity.Article">
+        <id column="article_id" property="articleId"/>
+        <result column="title" property="title"/>
+        <result column="author" property="authorId"/>
+        <result column="published_time" property="publishedTime"/>
+        <result column="content" property="content"/>
+        <result column="collection" property="collection"/>
+        <result column="share" property="share"/>
+        <result column="comment" property="comment"/>
+        <result column="star" property="star"/>
+        <result column="stick" property="stick"/>
+        <result column="page_view" property="pageView"/>
+        <!-- 扩展字段 -->
+        <result column="author_nick" property="authorNick"/>
+        <result column="author_img" property="authorImg"/>
+        <result column="tag_name" property="tagName"/>
+        <result column="tag_id" property="tagId"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        a.article_id, a.title, a.author, a.published_time, a.content,
+        a.collection, a.share, a.comment, a.star, a.stick, a.page_view
+    </sql>
+
+    <!-- 根据ID查询文章 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               u.nickname as author_nick, u.portrait as author_img
+        FROM a_article a
+        LEFT JOIN user u ON a.author = u.user_id
+        WHERE a.article_id = #{articleId}
+        LIMIT 1
+    </select>
+
+    <!-- 查询文章列表（带作者信息） -->
+    <select id="selectListWithAuthor" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               u.nickname as author_nick, u.portrait as author_img
+        FROM a_article a
+        LEFT JOIN user u ON a.author = u.user_id
+        ORDER BY a.stick DESC, a.published_time DESC
+    </select>
+
+    <!-- 分页查询文章列表 -->
+    <select id="selectArticleList" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               u.nickname as author_nick, u.portrait as author_img
+        FROM a_article a
+        LEFT JOIN user u ON a.author = u.user_id
+        ORDER BY a.stick DESC, a.published_time DESC
+    </select>
+
+    <!-- 查询用户的文章列表 -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               u.nickname as author_nick, u.portrait as author_img
+        FROM a_article a
+        LEFT JOIN user u ON a.author = u.user_id
+        WHERE a.author = #{userId}
+        ORDER BY a.published_time DESC
+    </select>
+
+    <!-- 插入新文章 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="articleId">
+        INSERT INTO a_article (title, author, content, collection, share, comment, star, stick, page_view)
+        VALUES (#{title}, #{authorId}, #{content}, #{collection}, #{share}, #{comment}, #{star}, #{stick}, #{pageView})
+    </insert>
+
+    <!-- 更新文章 -->
+    <update id="update">
+        UPDATE a_article
+        <set>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="collection != null">collection = #{collection},</if>
+            <if test="share != null">share = #{share},</if>
+            <if test="comment != null">comment = #{comment},</if>
+            <if test="star != null">star = #{star},</if>
+            <if test="stick != null">stick = #{stick},</if>
+            <if test="pageView != null">page_view = #{pageView}</if>
+        </set>
+        WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 删除文章 -->
+    <delete id="deleteById">
+        DELETE FROM a_article WHERE article_id = #{articleId}
+    </delete>
+
+    <!-- 增加浏览量 -->
+    <update id="incrementPageView">
+        UPDATE a_article SET page_view = page_view + 1 WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 增加点赞数 -->
+    <update id="incrementStar">
+        UPDATE a_article SET star = star + 1 WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 减少点赞数 -->
+    <update id="decrementStar">
+        UPDATE a_article SET star = GREATEST(star - 1, 0) WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 增加评论数 -->
+    <update id="incrementComment">
+        UPDATE a_article SET comment = comment + 1 WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 减少评论数 -->
+    <update id="decrementComment">
+        UPDATE a_article SET comment = GREATEST(comment - 1, 0) WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 增加收藏数 -->
+    <update id="incrementCollection">
+        UPDATE a_article SET collection = collection + 1 WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 减少收藏数 -->
+    <update id="decrementCollection">
+        UPDATE a_article SET collection = GREATEST(collection - 1, 0) WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 增加转发数 -->
+    <update id="incrementShare">
+        UPDATE a_article SET share = share + 1 WHERE article_id = #{articleId}
+    </update>
+
+    <!-- 查询总记录数 -->
+    <select id="selectTotalCount" resultType="int">
+        SELECT COUNT(1) FROM a_article
+    </select>
+
+    <!-- 查询用户的文章数 -->
+    <select id="selectCountByUserId" resultType="int">
+        SELECT COUNT(1) FROM a_article WHERE author = #{userId}
+    </select>
+
+    <!-- 搜索文章 -->
+    <select id="searchByKeyword" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               u.nickname as author_nick, u.portrait as author_img
+        FROM a_article a
+        LEFT JOIN user u ON a.author = u.user_id
+        WHERE a.title LIKE CONCAT('%', #{keyword}, '%')
+           OR a.content LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY a.stick DESC, a.published_time DESC
+    </select>
+
+</mapper>

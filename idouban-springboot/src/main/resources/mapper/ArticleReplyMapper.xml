@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lzh.idouban.mapper.ArticleReplyMapper">
+
+    <resultMap id="BaseResultMap" type="com.lzh.idouban.entity.ArticleReply">
+        <id column="reply_id" property="replyId"/>
+        <result column="comment_id" property="commentId"/>
+        <result column="from_user_id" property="fromUserId"/>
+        <result column="to_user_id" property="toUserId"/>
+        <result column="reply_msg" property="replyMsg"/>
+        <result column="reply_time" property="replyTime"/>
+        <result column="r_star" property="replyStar"/>
+        <!-- 扩展字段 -->
+        <result column="from_user_nick" property="fromUserNick"/>
+        <result column="to_user_nick" property="toUserNick"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        r.reply_id, r.comment_id, r.from_user_id, r.to_user_id, r.reply_msg, r.reply_time, r.r_star
+    </sql>
+
+    <!-- 根据ID查询回复 -->
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               fu.nickname as from_user_nick, tu.nickname as to_user_nick
+        FROM a_reply r
+        LEFT JOIN user fu ON r.from_user_id = fu.user_id
+        LEFT JOIN user tu ON r.to_user_id = tu.user_id
+        WHERE r.reply_id = #{replyId}
+        LIMIT 1
+    </select>
+
+    <!-- 查询评论的所有回复（带用户信息） -->
+    <select id="selectByCommentId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>,
+               fu.nickname as from_user_nick, tu.nickname as to_user_nick
+        FROM a_reply r
+        LEFT JOIN user fu ON r.from_user_id = fu.user_id
+        LEFT JOIN user tu ON r.to_user_id = tu.user_id
+        WHERE r.comment_id = #{commentId}
+        ORDER BY r.reply_time ASC
+    </select>
+
+    <!-- 插入新回复 -->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="replyId">
+        INSERT INTO a_reply (comment_id, from_user_id, to_user_id, reply_msg, r_star)
+        VALUES (#{commentId}, #{fromUserId}, #{toUserId}, #{replyMsg}, #{replyStar})
+    </insert>
+
+    <!-- 删除回复 -->
+    <delete id="deleteById">
+        DELETE FROM a_reply WHERE reply_id = #{replyId}
+    </delete>
+
+    <!-- 增加点赞数 -->
+    <update id="incrementStar">
+        UPDATE a_reply SET r_star = r_star + 1 WHERE reply_id = #{replyId}
+    </update>
+
+    <!-- 减少点赞数 -->
+    <update id="decrementStar">
+        UPDATE a_reply SET r_star = GREATEST(r_star - 1, 0) WHERE reply_id = #{replyId}
+    </update>
+
+</mapper>
