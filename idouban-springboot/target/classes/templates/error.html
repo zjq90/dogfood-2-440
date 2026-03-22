@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>错误 - iDouban</title>
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .error-container {
+            text-align: center;
+            padding: 40px;
+        }
+        .error-code {
+            font-size: 120px;
+            font-weight: bold;
+            color: #00b51d;
+            margin-bottom: 20px;
+        }
+        .error-message {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .error-description {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .btn-home {
+            padding: 12px 40px;
+            background: #00b51d;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .btn-home:hover {
+            background: #009916;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-code">500</div>
+        <div class="error-message">出错了</div>
+        <div class="error-description" th:text="${errorMsg != null ? errorMsg : '抱歉，服务器出现了一些问题'}">抱歉，服务器出现了一些问题</div>
+        <a href="/article/list" class="btn-home">返回首页</a>
+    </div>
+</body>
+</html>

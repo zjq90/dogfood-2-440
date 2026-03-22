@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发布文章 - iDouban</title>
+    <link rel="icon" href="/images/favicon.ico" type="image/x-icon">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+        }
+        .header {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+        .logo {
+            color: #00b51d;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .nav a {
+            color: #333;
+            text-decoration: none;
+            margin-left: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        .editor-container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .editor-header {
+            margin-bottom: 20px;
+        }
+        .editor-header h2 {
+            font-size: 20px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 400px;
+            font-family: monospace;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #00b51d;
+        }
+        .editor-toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .toolbar-btn {
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .toolbar-btn:hover {
+            background: #f0f0f0;
+        }
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .btn-submit {
+            padding: 12px 40px;
+            background: #00b51d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .btn-submit:hover {
+            background: #009916;
+        }
+        .btn-cancel {
+            padding: 12px 40px;
+            background: #f5f5f5;
+            color: #666;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-cancel:hover {
+            background: #e8e8e8;
+        }
+        .tips {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            color: #666;
+            font-size: 14px;
+        }
+        .tips h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .tips ul {
+            margin-left: 20px;
+        }
+        .tips li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">iDouban</div>
+            <nav class="nav">
+                <a href="/article/list">首页</a>
+                <a href="/friend/list">好友</a>
+                <a href="/doumail/list">豆邮</a>
+                <a href="/user/logout">退出</a>
+            </nav>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="editor-container">
+            <div class="editor-header">
+                <h2>发布新文章</h2>
+            </div>
+            
+            <form id="articleForm">
+                <div class="form-group">
+                    <label for="title">文章标题</label>
+                    <input type="text" id="title" name="title" placeholder="请输入文章标题" required maxlength="200">
+                </div>
+                
+                <div class="form-group">
+                    <label for="content">文章内容</label>
+                    <div class="editor-toolbar">
+                        <button type="button" class="toolbar-btn" onclick="insertTag('<h2>', '</h2>')">标题</button>
+                        <button type="button" class="toolbar-btn" onclick="insertTag('<b>', '</b>')">粗体</button>
+                        <button type="button" class="toolbar-btn" onclick="insertTag('<i>', '</i>')">斜体</button>
+                        <button type="button" class="toolbar-btn" onclick="insertTag('<p>', '</p>')">段落</button>
+                        <button type="button" class="toolbar-btn" onclick="insertTag('<br>', '')">换行</button>
+                    </div>
+                    <textarea id="content" name="content" placeholder="请输入文章内容，支持HTML标签..." required></textarea>
+                </div>
+                
+                <div class="btn-group">
+                    <button type="submit" class="btn-submit">发布文章</button>
+                    <a href="/article/list" class="btn-cancel">取消</a>
+                </div>
+            </form>
+            
+            <div class="tips">
+                <h4>编辑提示</h4>
+                <ul>
+                    <li>支持HTML标签，可使用工具栏快速插入常用标签</li>
+                    <li>标题长度限制200字符，内容长度限制50000字符</li>
+                    <li>请遵守社区规范，发布优质内容</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function insertTag(startTag, endTag) {
+            var textarea = document.getElementById('content');
+            var start = textarea.selectionStart;
+            var end = textarea.selectionEnd;
+            var selectedText = textarea.value.substring(start, end);
+            var replacement = startTag + selectedText + endTag;
+            
+            textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+            textarea.focus();
+            textarea.selectionStart = start + startTag.length;
+            textarea.selectionEnd = start + startTag.length + selectedText.length;
+        }
+        
+        document.getElementById('articleForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            var title = document.getElementById('title').value.trim();
+            var content = document.getElementById('content').value.trim();
+            
+            if (!title) {
+                alert('请输入文章标题');
+                return;
+            }
+            if (!content) {
+                alert('请输入文章内容');
+                return;
+            }
+            
+            var data = {
+                title: title,
+                content: content
+            };
+            
+            fetch('/article/publish', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.code === 200) {
+                    alert('发布成功！');
+                    window.location.href = '/article/list';
+                } else {
+                    alert(result.message || '发布失败');
+                }
+            })
+            .catch(err => {
+                alert('发布失败：' + err.message);
+            });
+        });
+    </script>
+</body>
+</html>
